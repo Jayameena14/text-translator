@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TEXTRA — Text Translation & Speech</title>
+    <style>
+        * { box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+        h1 {
+            text-align: center;
+            color: #fff;
+            letter-spacing: 2px;
+            margin-bottom: 5px;
+        }
+        .subtitle {
+            text-align: center;
+            color: #eee;
+            margin-bottom: 25px;
+            font-size: 14px;
+        }
+        .container {
+            max-width: 700px;
+            margin: 0 auto;
+            padding: 30px;
+            background-color: white;
+            border-radius: 12px;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.2);
+        }
+        label {
+            font-weight: 600;
+            color: #444;
+            font-size: 14px;
+            display: block;
+            margin-bottom: 5px;
+        }
+        textarea, select {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 16px;
+            border-radius: 6px;
+            border: 1px solid #ccc;
+            font-size: 17px;
+            font-family: inherit;
+        }
+        textarea {
+            min-height: 200px;
+            resize: vertical;
+            line-height: 1.5;
+        }
+        textarea:focus, select:focus {
+            outline: none;
+            border-color: #764ba2;
+        }
+        .row {
+            display: flex;
+            gap: 15px;
+        }
+        .row > div {
+            flex: 1;
+        }
+        button {
+            padding: 12px 15px;
+            background-color: #764ba2;
+            color: white;
+            border: none;
+            cursor: pointer;
+            width: 100%;
+            border-radius: 6px;
+            font-size: 15px;
+            font-weight: 600;
+            transition: background-color 0.2s;
+        }
+        button:hover {
+            background-color: #5f3a85;
+        }
+        .char-count {
+            text-align: right;
+            font-size: 12px;
+            color: #888;
+            margin-top: -12px;
+            margin-bottom: 12px;
+        }
+        .error {
+            margin-top: 20px;
+            padding: 12px 15px;
+            background-color: #fdecea;
+            border: 1px solid #f5c2c0;
+            color: #b3261e;
+            border-radius: 6px;
+            font-size: 14px;
+        }
+        .result {
+            margin-top: 20px;
+            padding: 18px;
+            background-color: #f4f4f8;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+        }
+        .result p {
+            font-size: 19px;
+            color: #222;
+            line-height: 1.6;
+        }
+        .language-info {
+            font-size: 13px;
+            color: #666;
+            margin-top: 8px;
+            margin-bottom: 14px;
+        }
+        audio {
+            width: 100%;
+            margin-top: 8px;
+        }
+        .input-tools {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            margin-bottom: 18px;
+            padding: 14px;
+            background-color: #f8f7fc;
+            border: 1px solid #e6e2f3;
+            border-radius: 8px;
+        }
+        .tool {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+        .tool label {
+            margin-bottom: 0;
+            font-size: 13px;
+            color: #555;
+            min-width: 220px;
+        }
+        .tool input[type="file"] {
+            flex: 1;
+            min-width: 150px;
+            padding: 4px;
+            margin-bottom: 0;
+            font-size: 12px;
+            border: 1px solid #ddd;
+        }
+        .tool-status {
+            font-size: 12px;
+            color: #764ba2;
+            font-weight: 600;
+        }
+        .tool-status.error {
+            color: #b3261e;
+        }
+        .mic-btn {
+            width: auto;
+            padding: 6px 14px;
+            font-size: 13px;
+            background-color: #764ba2;
+        }
+        .mic-btn.recording {
+            background-color: #d32f2f;
+            animation: pulse 1.2s infinite;
+        }
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.6; }
+            100% { opacity: 1; }
+        }
+        .original-text {
+            margin-top: 16px;
+            padding: 12px 15px;
+            background-color: #fff3e0;
+            border: 1px solid #f0c4a0;
+            border-radius: 6px;
+            font-size: 14px;
+            color: #555;
+        }
+    </style>
+</head>
+<body>
+    <h1>TEXTRA</h1>
+    <p class="subtitle">Translate text into 67 languages and listen to it instantly</p>
+
+    <div class="container">
+        <form method="POST" id="translateForm">
+            <label for="text">Text to translate</label>
+            <textarea name="text" id="text" rows="10" maxlength="10000"
+                placeholder="Enter text, upload a file/image, or use the mic">{{ original_text }}</textarea>
+            <div class="char-count"><span id="charCount">0</span> / 10000</div>
+
+            <div class="input-tools">
+                <div class="tool">
+                    <label for="fileInput">📄 Upload file (.txt, .docx, .pdf)</label>
+                    <input type="file" id="fileInput" accept=".txt,.docx,.pdf">
+                    <span class="tool-status" id="fileStatus"></span>
+                </div>
+                <div class="tool">
+                    <label>🎤 Speak instead of typing</label>
+                    <button type="button" id="micButton" class="mic-btn">Start Recording</button>
+                    <span class="tool-status" id="micStatus"></span>
+                </div>
+            </div>
+
+            <div class="row">
+                <div>
+                    <label for="source_language">Source Language</label>
+                    <select name="source_language">
+                        <option value="">Auto Detect</option>
+                        {% for code, language in languages.items() %}
+                            <option value="{{ code }}" {% if code == source_language %}selected{% endif %}>{{ language }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div>
+                    <label for="target_language">Target Language</label>
+                    <select name="target_language" required>
+                        <option value="" disabled {% if not target_language %}selected{% endif %}>Choose language</option>
+                        {% for code, language in languages.items() %}
+                            <option value="{{ code }}" {% if code == target_language %}selected{% endif %}>{{ language }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+
+            <button type="submit">Translate</button>
+        </form>
+
+        {% if error %}
+            <div class="error">{{ error }}</div>
+        {% endif %}
+
+        {% if translated_text and not error %}
+            <div class="result">
+                <h2 style="margin-top:0;">Translated Text</h2>
+                <p>{{ translated_text }}</p>
+                <div class="language-info">
+                    <strong>Detected/Source Language:</strong> {{ original_language }}
+                </div>
+
+                {% if audio_url %}
+                    <audio controls>
+                        <source src="{{ audio_url }}" type="audio/mpeg">
+                        Your browser does not support audio playback.
+                    </audio>
+                {% endif %}
+            </div>
+
+            <div class="original-text">
+                <strong>Original Text:</strong> {{ original_text }}
+            </div>
+        {% endif %}
+    </div>
+
+    <script>
+        const textarea = document.getElementById('text');
+        const charCount = document.getElementById('charCount');
+        function updateCount() {
+            charCount.textContent = textarea.value.length;
+        }
+        textarea.addEventListener('input', updateCount);
+        updateCount();
+
+        function setStatus(el, message, isError) {
+            el.textContent = message;
+            el.classList.toggle('error', !!isError);
+        }
+
+        // ---- File upload (.txt / .docx / .pdf) ----
+        const fileInput = document.getElementById('fileInput');
+        const fileStatus = document.getElementById('fileStatus');
+        fileInput.addEventListener('change', async () => {
+            const file = fileInput.files[0];
+            if (!file) return;
+
+            setStatus(fileStatus, 'Extracting text...', false);
+            const formData = new FormData();
+            formData.append('file', file);
+
+            try {
+                const res = await fetch('/extract-file', { method: 'POST', body: formData });
+                const data = await res.json();
+                if (!res.ok) {
+                    setStatus(fileStatus, data.error || 'Failed to extract text.', true);
+                    return;
+                }
+                textarea.value = data.text;
+                updateCount();
+                setStatus(fileStatus, 'Text extracted ✓', false);
+            } catch (err) {
+                setStatus(fileStatus, 'Upload failed. Try again.', true);
+            }
+        });
+
+        // ---- Voice input (Web Speech API) ----
+        const micButton = document.getElementById('micButton');
+        const micStatus = document.getElementById('micStatus');
+        const SpeechRecognitionAPI = window.SpeechRecognition || window.webkitSpeechRecognition;
+
+        if (!SpeechRecognitionAPI) {
+            micButton.disabled = true;
+            setStatus(micStatus, 'Voice input not supported in this browser (try Chrome).', true);
+        } else {
+            let recognition = null;
+            let isRecording = false;
+
+            micButton.addEventListener('click', () => {
+                if (isRecording) {
+                    recognition.stop();
+                    return;
+                }
+
+                recognition = new SpeechRecognitionAPI();
+                recognition.lang = 'en-US'; // browser voice recognition; adjust if needed
+                recognition.interimResults = true;
+                recognition.continuous = true;
+
+                let finalTranscript = textarea.value ? textarea.value + ' ' : '';
+
+                recognition.onstart = () => {
+                    isRecording = true;
+                    micButton.textContent = 'Stop Recording';
+                    micButton.classList.add('recording');
+                    setStatus(micStatus, 'Listening...', false);
+                };
+
+                recognition.onresult = (event) => {
+                    let interim = '';
+                    for (let i = event.resultIndex; i < event.results.length; i++) {
+                        const transcript = event.results[i][0].transcript;
+                        if (event.results[i].isFinal) {
+                            finalTranscript += transcript + ' ';
+                        } else {
+                            interim += transcript;
+                        }
+                    }
+                    textarea.value = (finalTranscript + interim).slice(0, 10000);
+                    updateCount();
+                };
+
+                recognition.onerror = (event) => {
+                    setStatus(micStatus, 'Mic error: ' + event.error, true);
+                };
+
+                recognition.onend = () => {
+                    isRecording = false;
+                    micButton.textContent = 'Start Recording';
+                    micButton.classList.remove('recording');
+                    setStatus(micStatus, 'Stopped.', false);
+                };
+
+                recognition.start();
+            });
+        }
+    </script>
+</body>
+</html>
